@@ -284,7 +284,6 @@ checkin_verifications(id, record_id, gps_lat, gps_lng, distance_to_class, wifi_b
 * Dự đoán sinh viên có nguy cơ vắng nhiều dựa trên:
   * Lịch sử điểm danh
   * Pattern vắng (hay vắng thứ 2, tiết đầu...)
-  * Điểm GPA các kỳ trước
 * Model: Simple classification (Random Forest / Logistic Regression)
 
 ### Trend Analysis
