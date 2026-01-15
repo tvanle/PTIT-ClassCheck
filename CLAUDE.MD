@@ -229,3 +229,322 @@ Rule late: nếu check-in sau `start_time + X phút` thì `late`.
 * Auth: JWT + refresh token
 
 ---
+
+## 11) Anti-cheating System (điểm cộng lớn)
+
+### Rotating QR Code
+* QR code thay đổi mỗi 10-15 giây
+* Sinh viên không thể chụp gửi cho bạn bè
+* Implementation: Server generate JWT token ngắn hạn, encode vào QR
+
+### Geofencing
+* Kiểm tra GPS sinh viên có trong bán kính lớp học (50-100m)
+* Kết hợp với WiFi BSSID của trường để verify location
+* Fallback: Nếu indoor không có GPS, dùng WiFi fingerprint
+
+### Device Fingerprint
+* Mỗi sinh viên đăng ký tối đa 2 device
+* Lưu device_id, model, OS version
+* Cảnh báo nếu điểm danh từ device lạ
+
+### Face Recognition (Optional)
+* Chụp selfie khi điểm danh
+* So sánh với ảnh thẻ sinh viên đã đăng ký
+* Dùng service như AWS Rekognition / Azure Face API
+
+**Anti-cheat DB schema:**
+```sql
+device_registrations(id, student_id, device_id, device_name, os, registered_at, status)
+checkin_verifications(id, record_id, gps_lat, gps_lng, distance_to_class, wifi_bssid, device_id, face_match_score, verified)
+```
+
+---
+
+## 12) Real-time Features
+
+### WebSocket cho Live Updates
+* Teacher thấy danh sách điểm danh cập nhật realtime
+* Live counter: "15/45 sinh viên đã điểm danh"
+* Notification toast khi có SV mới check-in
+
+### Server-Sent Events (SSE)
+* Lightweight hơn WebSocket cho one-way updates
+* Dashboard cập nhật số liệu realtime
+
+### Implementation
+* Socket.IO (Node.js) hoặc Spring WebSocket
+* Redis Pub/Sub để broadcast giữa các instance
+
+---
+
+## 13) Smart Alert & Prediction System
+
+### Rule-based Alerts
+* Vắng 3 buổi → Email cảnh báo sinh viên
+* Vắng 5 buổi → Email CTSV + Cố vấn học tập
+* Vắng 20% tổng buổi → Cảnh báo cấm thi
+
+### ML-based Prediction (nâng cao)
+* Dự đoán sinh viên có nguy cơ vắng nhiều dựa trên:
+  * Lịch sử điểm danh
+  * Pattern vắng (hay vắng thứ 2, tiết đầu...)
+  * Điểm GPA các kỳ trước
+* Model: Simple classification (Random Forest / Logistic Regression)
+
+### Trend Analysis
+* Phát hiện pattern: "SV này hay vắng tiết 1-2 thứ 2"
+* Heatmap: Giờ nào lớp hay vắng nhất
+* So sánh tỷ lệ chuyên cần giữa các lớp
+
+**Alert DB schema:**
+```sql
+alert_rules(id, name, condition_type, threshold, action_type, recipient_roles, enabled)
+alert_history(id, rule_id, student_id, class_id, triggered_at, action_taken, status)
+prediction_scores(id, student_id, class_id, risk_score, factors_json, calculated_at)
+```
+
+---
+
+## 14) Calendar & Reminder Integration
+
+### Google Calendar / Outlook Sync
+* Export lịch học sang calendar cá nhân
+* Auto-update khi có thay đổi phòng/giờ
+
+### Push Notifications
+* Nhắc trước 15 phút: "Bạn có tiết Kiến trúc hướng dịch vụ lúc 13:00"
+* Nhắc nộp đơn xin nghỉ trước deadline
+* Thông báo kết quả duyệt đơn
+
+### Implementation
+* Firebase Cloud Messaging (FCM) cho mobile
+* Web Push API cho browser
+* Scheduler: Bull Queue (Node.js) / Quartz (Java)
+
+---
+
+## 15) Audit Trail & Compliance
+
+### Comprehensive Logging
+* Log mọi thao tác CRUD
+* Ai sửa điểm danh, lúc nào, từ IP nào, giá trị cũ → mới
+* Không cho phép xóa cứng, chỉ soft-delete
+
+### Export & Reporting
+* Export báo cáo theo template phòng đào tạo
+* Format: Excel, PDF với chữ ký số
+* Lưu trữ lịch sử báo cáo đã xuất
+
+### Data Retention
+* Giữ data tối thiểu 5 năm theo quy định
+* Archive data cũ sang cold storage
+
+**Audit DB schema:**
+```sql
+audit_logs(id, entity_type, entity_id, action, old_value, new_value, user_id, ip_address, user_agent, created_at)
+export_history(id, report_type, params_json, file_url, exported_by, exported_at)
+```
+
+---
+
+## 16) API Gateway & Resilience
+
+### Rate Limiting
+* Giới hạn request/phút theo user/IP
+* Chống spam điểm danh, brute force
+
+### Circuit Breaker
+* Khi 1 service die, không kéo sập cả hệ thống
+* Fallback response cho critical paths
+* Library: Resilience4j (Java) / Polly (.NET) / opossum (Node.js)
+
+### Distributed Tracing
+* Trace request từ Gateway → các services
+* Tools: Jaeger / Zipkin / OpenTelemetry
+* Correlation ID cho mỗi request
+
+### Health Checks
+* Liveness & Readiness probes
+* Dashboard monitoring: Grafana + Prometheus
+
+---
+
+## 17) Caching Strategy
+
+### Redis Cache
+* Cache thông tin lớp, danh sách SV (ít thay đổi)
+* Cache QR token validation
+* Session storage cho JWT
+
+### Cache Invalidation
+* Event-driven invalidation khi data thay đổi
+* TTL-based cho data ít quan trọng
+* Cache-aside pattern
+
+### Caching layers
+```
+Client → CDN (static) → API Gateway (response cache) → Redis → Database
+```
+
+---
+
+## 18) Kiến trúc tổng quan (Updated)
+
+```
+                         ┌─────────────┐
+                         │   Nginx /   │
+                         │   Traefik   │
+                         └──────┬──────┘
+                                │
+                    ┌───────────▼───────────┐
+                    │      API Gateway      │
+                    │  (Kong / Spring GW)   │
+                    │  - Rate Limiting      │
+                    │  - Auth Validation    │
+                    │  - Circuit Breaker    │
+                    └───────────┬───────────┘
+                                │
+     ┌──────────┬───────────┬───┴────┬───────────┬──────────┐
+     │          │           │        │           │          │
+┌────▼────┐┌────▼────┐┌─────▼─────┐┌─▼─────┐┌────▼────┐┌────▼────┐
+│Identity ││Classroom││Attendance ││ Leave ││Reporting││  Notif  │
+│ Service ││ Service ││  Service  ││Service││ Service ││ Service │
+└────┬────┘└────┬────┘└─────┬─────┘└───┬───┘└────┬────┘└────┬────┘
+     │          │           │          │         │          │
+     │     ┌────┴────┐ ┌────┴────┐     │         │          │
+     │     │ Redis   │ │ Redis   │     │         │          │
+     │     │ (cache) │ │(QR tok) │     │         │          │
+     │     └─────────┘ └─────────┘     │         │          │
+     │          │           │          │         │          │
+┌────▼────┐┌────▼────┐┌─────▼─────┐┌───▼───┐┌────▼────┐┌────▼────┐
+│   DB    ││   DB    ││    DB     ││  DB   ││   DB    ││   DB    │
+│Identity ││Classroom││Attendance ││ Leave ││Reporting││  Notif  │
+└─────────┘└─────────┘└───────────┘└───────┘└─────────┘└─────────┘
+                                │
+                    ┌───────────▼───────────┐
+                    │   Message Broker      │
+                    │   (RabbitMQ/Kafka)    │
+                    └───────────┬───────────┘
+                                │
+                    ┌───────────▼───────────┐
+                    │   Monitoring Stack    │
+                    │ Prometheus + Grafana  │
+                    │ Jaeger (Tracing)      │
+                    │ ELK (Logging)         │
+                    └───────────────────────┘
+```
+
+---
+
+## 19) Tech Stack chi tiết
+
+| Layer | Technology | Lý do chọn |
+|-------|------------|------------|
+| API Gateway | Kong / Spring Cloud Gateway | Plugin ecosystem, rate limit built-in |
+| Backend | NestJS (TypeScript) | Type-safe, microservice support tốt |
+| Database | PostgreSQL | ACID, JSON support, mature |
+| Cache | Redis | Fast, pub/sub, session store |
+| Message Broker | RabbitMQ | Dễ setup, đủ cho BTL |
+| Real-time | Socket.IO | Cross-platform, fallback support |
+| Push Notification | Firebase FCM | Free, reliable |
+| File Storage | MinIO / S3 | S3-compatible, self-hosted được |
+| Monitoring | Prometheus + Grafana | Industry standard |
+| Tracing | Jaeger | OpenTelemetry compatible |
+| Logging | ELK Stack | Powerful search & visualize |
+| Container | Docker + Docker Compose | Easy local dev |
+| Orchestration | Kubernetes (optional) | Production-ready scaling |
+
+---
+
+## 20) Deployment Architecture
+
+### Development (Docker Compose)
+```yaml
+services:
+  - api-gateway
+  - identity-service
+  - classroom-service
+  - attendance-service
+  - leave-service
+  - notification-service
+  - reporting-service
+  - postgres (multi-db)
+  - redis
+  - rabbitmq
+  - prometheus
+  - grafana
+```
+
+### Production (Kubernetes)
+* Helm charts cho mỗi service
+* HPA (Horizontal Pod Autoscaler) cho auto-scaling
+* Ingress controller cho routing
+* Secrets management với Vault
+* CI/CD: GitHub Actions → ArgoCD
+
+---
+
+## 21) Security Checklist
+
+- [ ] JWT với short expiry + refresh token rotation
+- [ ] HTTPS everywhere (TLS 1.3)
+- [ ] Input validation & sanitization
+- [ ] SQL injection prevention (parameterized queries)
+- [ ] XSS prevention (output encoding)
+- [ ] CORS configuration
+- [ ] Rate limiting per user/IP
+- [ ] Brute force protection (account lockout)
+- [ ] Sensitive data encryption at rest
+- [ ] Audit logging for compliance
+- [ ] Dependency vulnerability scanning
+- [ ] Container image scanning
+
+---
+
+## 22) Demo Scenarios (để thuyết trình)
+
+### Scenario 1: QR Điểm danh với Anti-cheat
+1. GV mở phiên điểm danh → QR hiện lên, xoay mỗi 10s
+2. SV scan QR → App check GPS/Device → Điểm danh thành công
+3. SV khác thử chụp QR cũ → Fail (token expired)
+4. Dashboard GV thấy realtime: 30/45 đã điểm danh
+
+### Scenario 2: Xin nghỉ có phê duyệt
+1. SV tạo đơn xin nghỉ 2 buổi, đính kèm giấy khám bệnh
+2. GV nhận notification, vào duyệt đơn
+3. Approve → Attendance auto update "excused"
+4. SV nhận thông báo đơn đã duyệt
+5. Report cập nhật: tỷ lệ chuyên cần không bị ảnh hưởng
+
+### Scenario 3: Cảnh báo tự động
+1. SV vắng 3 buổi liên tiếp
+2. System trigger alert → Email SV
+3. Admin/CTSV xem dashboard alerts
+4. ML model flag SV này "high risk"
+
+---
+
+## 23) Estimation & Milestones
+
+### Phase 1: Core (MVP)
+* Identity + Classroom + Attendance Service
+* Basic QR điểm danh (không rotating)
+* PostgreSQL + RabbitMQ setup
+
+### Phase 2: Leave & Notification
+* Leave Service với approval workflow
+* Email notification
+* Event-driven integration
+
+### Phase 3: Advanced Features
+* Rotating QR + Geofencing
+* Real-time WebSocket
+* Reporting dashboard
+
+### Phase 4: Polish
+* Audit logging
+* Monitoring stack
+* Security hardening
+* Docker Compose hoàn chỉnh
+
+---
