@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@app/common": ["../../libs/common/src"],
+      "@app/common/*": ["../../libs/common/src/*"],
+      "@app/dto": ["../../libs/dto/src"],
+      "@app/dto/*": ["../../libs/dto/src/*"],
+      "@app/events": ["../../libs/events/src"],
+      "@app/events/*": ["../../libs/events/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

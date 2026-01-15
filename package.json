@@ -1,0 +1,26 @@
+{
+  "name": "ptit-classcheck",
+  "version": "1.0.0",
+  "description": "Hệ thống Quản lý điểm danh + xin nghỉ - Microservices",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "libs/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "start:dev:identity": "npm run start:dev --workspace=services/identity-service",
+    "start:dev:classroom": "npm run start:dev --workspace=services/classroom-service",
+    "start:dev:attendance": "npm run start:dev --workspace=services/attendance-service",
+    "start:dev:leave": "npm run start:dev --workspace=services/leave-service",
+    "start:dev:notification": "npm run start:dev --workspace=services/notification-service",
+    "start:dev:reporting": "npm run start:dev --workspace=services/reporting-service",
+    "start:dev:gateway": "npm run start:dev --workspace=services/api-gateway",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

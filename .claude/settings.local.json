@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose:*)",
+      "Bash(npm install:*)",
+      "Bash(npm view:*)",
+      "Bash(findstr:*)",
+      "Bash(if exist package-lock.json del package-lock.json)",
+      "Bash(if exist node_modules rmdir /s /q node_modules)",
+      "Bash(del /f package-lock.json)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}
