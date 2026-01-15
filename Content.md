@@ -247,10 +247,6 @@ Rule late: nếu check-in sau `start_time + X phút` thì `late`.
 * Lưu device_id, model, OS version
 * Cảnh báo nếu điểm danh từ device lạ
 
-### Face Recognition (Optional)
-* Chụp selfie khi điểm danh
-* So sánh với ảnh thẻ sinh viên đã đăng ký
-* Dùng service như AWS Rekognition / Azure Face API
 
 **Anti-cheat DB schema:**
 ```sql
